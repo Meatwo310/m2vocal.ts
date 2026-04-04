@@ -1,8 +1,14 @@
+/** ローマ字 */
+type Romaji = string;
+
+/** ひらがなと巻き戻り数のエントリ */
+type HiraganaEntry = [hiragana: string, rewind: number];
+
 /**
  * ローマ字からひらがなへの変換テーブル。
  * キーにローマ字、値にひらがなと巻き戻り数を持つ
  */
-const hiraganaMap = new Map<string, [string, number]>([
+const hiraganaMap = new Map<Romaji, HiraganaEntry>([
   ["a", ["あ", 0]],
   ["i", ["い", 0]],
   ["u", ["う", 0]],
