@@ -1,8 +1,11 @@
 import { dirname, importx } from "@discordx/importer";
+import dotenv from "dotenv";
 
 import { bot } from "./bot.js";
 
 async function run() {
+  dotenv.config();
+
   // The following syntax should be used in the commonjs environment
   //
   // await importx(__dirname + "/{events,commands}/**/*.{ts,js}");
