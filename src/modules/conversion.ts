@@ -1,10 +1,12 @@
-import {type ArgsOf, Discord, On} from "discordx";
+import {type ArgsOf, Discord, Guard, On} from "discordx";
 import {bot} from "../bot";
 import {isAsciiOnly, romajiToJapanese} from "../util/converter";
+import {NotBot} from "@discordx/utilities";
 
 @Discord()
 export class Conversion {
   @On()
+  @Guard(NotBot)
   async messageCreate([message]: ArgsOf<"messageCreate">): Promise<void> {
     if (message.author.id === bot.user?.id) {
       return;
