@@ -11,7 +11,7 @@ import dotenv from "dotenv";
 // The following syntax should be used in the ECMAScript environment
 const importPattern = `${dirname(
   import.meta.url,
-)}/{events,commands}/**/*.{ts,js}`;
+)}/{events,commands,modules}/**/*.{ts,js}`;
 
 /**
  * Import files
