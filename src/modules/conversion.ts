@@ -3,7 +3,7 @@ import {bot} from "../bot";
 import {isAsciiOnly, romajiToJapanese} from "../util/converter";
 
 @Discord()
-export class Convertion {
+export class Conversion {
   @On()
   async messageCreate([message]: ArgsOf<"messageCreate">): Promise<void> {
     if (message.author.id === bot.user?.id) {
