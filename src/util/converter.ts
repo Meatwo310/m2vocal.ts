@@ -1,4 +1,4 @@
-import {hiraganaMap, maxKeyLength} from "./conversionTable";
+import {hiraganaMap, maxKeyLength} from "./conversionTable.js";
 
 
 /**
