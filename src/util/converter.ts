@@ -85,7 +85,7 @@ async function hiraganaPartsToJapanese(hiragana: string): Promise<string> {
     );
   } catch (e) {
     throw new ConversionError(
-      `Error during conversion to Japanese: ${e instanceof Error ? e.message : e}`
+      `Error during conversion "${hiragana}" to Japanese: ${e instanceof Error ? e.message : e}`
     );
   }
 }
