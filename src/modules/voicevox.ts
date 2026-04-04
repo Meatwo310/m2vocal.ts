@@ -4,10 +4,15 @@ import {createAudioPlayer, createAudioResource, getVoiceConnection, StreamType} 
 import {Readable} from "node:stream";
 import {NotBot} from "@discordx/utilities";
 
-// const VVClient = (_VVClient as any).default;
+const url = process.env.VOICEVOX_URL;
+if (!url) {
+  console.warn(`VOICEVOX_URL not specified`);
+}
 
 @Discord()
 export class Voicevox {
+  private readonly client: VVClient | null = url ? new VVClient(url) : null;
+
   @On()
   @Guard(NotBot)
   async messageCreate([message]: ArgsOf<"messageCreate">): Promise<void> {
@@ -21,13 +26,11 @@ export class Voicevox {
       return;
     }
 
-    const url = process.env.VOICEVOX_URL;
-    if (!url) {
-      console.warn(`VOICEVOX_URL not specified`);
-      return
+    if (!this.client) {
+      return;
     }
 
-    const client: VVClient = new VVClient(url);
+    const client = this.client;
     const msg = message.content;
 
     try {
