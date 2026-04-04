@@ -8,10 +8,6 @@ export class Conversion {
   @On()
   @Guard(NotBot)
   async messageCreate([message]: ArgsOf<"messageCreate">): Promise<void> {
-    if (message.author.id === bot.user?.id) {
-      return;
-    }
-
     const text = message.content;
     if (!shouldConvert(text)) {
       return;
