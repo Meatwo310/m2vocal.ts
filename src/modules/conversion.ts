@@ -1,5 +1,4 @@
 import {type ArgsOf, Discord, Guard, On} from "discordx";
-import {bot} from "../bot";
 import {isAsciiOnly, romajiToJapanese} from "../util/converter";
 import {NotBot} from "@discordx/utilities";
 

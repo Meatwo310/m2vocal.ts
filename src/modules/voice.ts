@@ -1,5 +1,5 @@
 import {Discord, Slash} from "discordx";
-import {CommandInteraction, GuildMember, Snowflake, SnowflakeUtil, VoiceBasedChannel} from "discord.js";
+import {CommandInteraction, GuildMember, VoiceBasedChannel} from "discord.js";
 import {entersState, getVoiceConnection, joinVoiceChannel, VoiceConnectionStatus} from "@discordjs/voice";
 import {bot} from "../bot";
 
