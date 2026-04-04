@@ -1,13 +1,15 @@
-import {type ArgsOf, Discord, On} from "discordx";
+import {type ArgsOf, Discord, Guard, On} from "discordx";
 import _VVClient from "voicevox-client";
 import {createAudioPlayer, createAudioResource, getVoiceConnection, StreamType} from "@discordjs/voice";
 import {Readable} from "node:stream";
+import {NotBot} from "@discordx/utilities";
 
 const VVClient = (_VVClient as any).default;
 
 @Discord()
 export class Voicevox {
   @On()
+  @Guard(NotBot)
   async messageCreate([message]: ArgsOf<"messageCreate">): Promise<void> {
     const guildId = message.guildId;
     if (!guildId) {
