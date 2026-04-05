@@ -9,19 +9,19 @@ export async function preprocessForTTS(message: Message, textOverride?: string):
   let text = textOverride ?? message.content;
 
   // コードブロック → コードブロック省略
-  text = text.replace(/```[\s\S]*?```/g, "コードブロック省略");
+  text = text.replace(/```[\s\S]*?```/g, " コードブロック省略 ");
 
   // コードスパン → コード省略
-  text = text.replace(/`[^`\n]+`/g, "コード省略");
+  text = text.replace(/`[^`\n]+`/g, " コード省略 ");
 
   // Markdownリンク: [表示名](<URL>) → 表示名
-  text = text.replace(/\[([^\]]+)\]\(<https?:\/\/[^>]*>\)/g, "$1");
+  text = text.replace(/\[([^\]]+)\]\(<https?:\/\/[^>]*>\)/g, " $1 ");
 
   // Markdownリンク: [表示名](URL) → 表示名
-  text = text.replace(/\[([^\]]+)\]\(https?:\/\/[^)]*\)/g, "$1");
+  text = text.replace(/\[([^\]]+)\]\(https?:\/\/[^)]*\)/g, " $1 ");
 
   // カスタム絵文字: <a?:name:id> → name
-  text = text.replace(/<a?:(\w+):\d+>/g, "$1");
+  text = text.replace(/<a?:(\w+):\d+>/g, " $1 ");
 
   // メンション: <@!?id> → 表示名
   text = await replaceMentions(message, text);
@@ -43,7 +43,7 @@ export async function preprocessForTTS(message: Message, textOverride?: string):
     text = (`${attachmentCount}個の添付ファイル ` + text.trim()).trim();
   }
 
-  return text.trim();
+  return text.replaceAll("\n", " ").trim();
 }
 
 async function replaceMentions(message: Message, text: string): Promise<string> {
@@ -72,16 +72,16 @@ async function replaceMentions(message: Message, text: string): Promise<string> 
           const member = await message.guild!.members.fetch(userId);
           nameMap.set(userId, member.displayName);
         } catch {
-          nameMap.set(userId, `ユーザー${userId}`);
+          nameMap.set(userId, "ユーザー");
         }
       })
     );
   }
   for (const userId of uncachedIds) {
-    if (!nameMap.has(userId)) nameMap.set(userId, `ユーザー${userId}`);
+    if (!nameMap.has(userId)) nameMap.set(userId, "ユーザー");
   }
 
-  return text.replace(mentionRegex, (_, userId: string) => nameMap.get(userId) ?? `ユーザー${userId}`);
+  return text.replace(mentionRegex, (_, userId: string) => ` ${nameMap.get(userId) ?? "ユーザー"} `);
 }
 
 async function replaceChannelMentions(message: Message, text: string): Promise<string> {
@@ -99,21 +99,21 @@ async function replaceChannelMentions(message: Message, text: string): Promise<s
         if (channel && "name" in channel && channel.name) {
           nameMap.set(channelId, channel.name);
         } else {
-          nameMap.set(channelId, `チャンネル${channelId}`);
+          nameMap.set(channelId, "チャンネル");
         }
       } catch {
-        nameMap.set(channelId, `チャンネル${channelId}`);
+        nameMap.set(channelId, "チャンネル");
       }
     })
   );
 
-  return text.replace(channelRegex, (_, channelId: string) => nameMap.get(channelId) ?? `チャンネル${channelId}`);
+  return text.replace(channelRegex, (_, channelId: string) => ` ${nameMap.get(channelId) ?? "チャンネル"} `);
 }
 
 function urlToDomain(url: string): string {
   try {
     const hostname = new URL(url).hostname;
-    return hostname.replace(/\./g, "ドット");
+    return ` ${hostname.replace(/\./g, "ドット")} `;
   } catch {
     return url;
   }
