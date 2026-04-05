@@ -39,7 +39,7 @@ export class Voice {
       console.error(e);
     }
 
-    let message = `${voiceChannel.name} に`;
+    let message = `✅ ${voiceChannel.name} に`;
     if (alreadyConnected) {
       message += "再接続";
     } else if (hasAnotherConnection) {
@@ -49,9 +49,9 @@ export class Voice {
     }
     message += "しました！\n"
     if (voicevoxVersion) {
-      message += `✅ VOICEVOX ${voicevoxVersion}`;
+      message += `VOICEVOX: ${voicevoxVersion}`;
     } else {
-      message += `❌ VOICEVOX 利用不可`
+      message += `VOICEVOX: 利用不可`
     }
     await interaction.editReply(message);
   }
