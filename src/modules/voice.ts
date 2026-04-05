@@ -32,20 +32,28 @@ export class Voice {
       return;
     }
 
-    let voicevoxVersion = "不明";
+    let voicevoxVersion = "";
     try {
       voicevoxVersion = await VoicevoxClient.getVersion();
     } catch (e) {
       console.error(e);
     }
 
+    let message = `${voiceChannel.name} に`;
     if (alreadyConnected) {
-      await interaction.editReply(`✅ ${voiceChannel.name} に再接続しました！\nVOICEVOXバージョン: ${voicevoxVersion}`);
+      message += "再接続";
     } else if (hasAnotherConnection) {
-      await interaction.editReply(`✅ ${voiceChannel.name} に移動しました！\nVOICEVOXバージョン: ${voicevoxVersion}`);
+      message += "移動";
     } else {
-      await interaction.editReply(`✅ ${voiceChannel.name} に接続しました！\nVOICEVOXバージョン: ${voicevoxVersion}`);
+      message += "接続";
     }
+    message += "しました！\n"
+    if (voicevoxVersion) {
+      message += `✅ VOICEVOX ${voicevoxVersion}`;
+    } else {
+      message += `❌ VOICEVOX 利用不可`
+    }
+    await interaction.editReply(message);
   }
 
   @Slash({ description: "stop" })
