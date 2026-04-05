@@ -2,6 +2,7 @@ import {Discord, Slash} from "discordx";
 import {CommandInteraction, GuildMember, VoiceBasedChannel} from "discord.js";
 import {entersState, getVoiceConnection, joinVoiceChannel, VoiceConnectionStatus} from "@discordjs/voice";
 import {bot} from "../bot.js";
+import {VoicevoxClient} from "../util/voicevoxClient";
 
 @Discord()
 export class Voice {
@@ -20,19 +21,30 @@ export class Voice {
       return;
     }
 
+    await interaction.deferReply();
+
     const alreadyConnected = voiceChannel.members.has(bot.user?.id || "0")
     const hasAnotherConnection = !!getVoiceConnection(guild.id);
     try {
       await connectWithHandler(voiceChannel);
-      if (alreadyConnected) {
-        await interaction.reply(`✅ ${voiceChannel.name} に再接続しました！`);
-      } else if (hasAnotherConnection) {
-        await interaction.reply(`✅ ${voiceChannel.name} に移動しました！`);
-      } else {
-        await interaction.reply(`✅ ${voiceChannel.name} に接続しました！`);
-      }
     } catch {
-      await interaction.reply('❌ VCへの接続に失敗しました');
+      await interaction.editReply('❌ VCへの接続に失敗しました');
+      return;
+    }
+
+    let voicevoxVersion = "不明";
+    try {
+      voicevoxVersion = await VoicevoxClient.getVersion();
+    } catch (e) {
+      console.error(e);
+    }
+
+    if (alreadyConnected) {
+      await interaction.editReply(`✅ ${voiceChannel.name} に再接続しました！\nVOICEVOXバージョン: ${voicevoxVersion}`);
+    } else if (hasAnotherConnection) {
+      await interaction.editReply(`✅ ${voiceChannel.name} に移動しました！\nVOICEVOXバージョン: ${voicevoxVersion}`);
+    } else {
+      await interaction.editReply(`✅ ${voiceChannel.name} に接続しました！\nVOICEVOXバージョン: ${voicevoxVersion}`);
     }
   }
 

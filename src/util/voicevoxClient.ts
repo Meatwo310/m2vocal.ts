@@ -14,6 +14,15 @@ export class VoicevoxClient {
     return res.json();
   }
 
+  static async getVersion(): Promise<string> {
+    const url = new URL("/version", this.baseUrl!);
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`VOICEVOX version failed: ${res.status} ${res.statusText}`);
+    }
+    return res.json();
+  }
+
   static async synthesis(query: AudioQuery, speaker: number): Promise<ArrayBuffer> {
     const url = new URL("/synthesis", this.baseUrl!);
     url.searchParams.set("speaker", String(speaker));
