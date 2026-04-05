@@ -3,6 +3,7 @@ import {CommandInteraction, GuildMember, VoiceBasedChannel} from "discord.js";
 import {entersState, getVoiceConnection, joinVoiceChannel, VoiceConnectionStatus} from "@discordjs/voice";
 import {bot} from "../bot.js";
 import {VoicevoxClient} from "../util/voicevoxClient";
+import {ttsChannelStore} from "./ttsChannelStore.js";
 
 @Discord()
 export class Voice {
@@ -53,6 +54,7 @@ export class Voice {
     } else {
       message += `VOICEVOX: 利用不可`
     }
+    ttsChannelStore.set(guild.id, interaction.channelId);
     await interaction.editReply(message);
   }
 
@@ -71,6 +73,7 @@ export class Voice {
     }
 
     connection.destroy();
+    ttsChannelStore.delete(guild.id);
     await interaction.reply('👋 VCから切断しました');
   }
 }
