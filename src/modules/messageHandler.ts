@@ -23,8 +23,8 @@ export class MessageHandler {
       }
     }
 
-    // チャット返信（変換できた場合のみ）
-    if (converted !== null) {
+    // チャット返信（変換できた場合かつ変換前後でテキストが変わった場合のみ）
+    if (converted !== null && converted !== text) {
       await message.reply({ content: converted, allowedMentions: {} }).catch((e) => console.error(e));
     }
 
