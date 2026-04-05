@@ -1,4 +1,5 @@
-import {createAudioPlayer, createAudioResource, getVoiceConnection, StreamType} from "@discordjs/voice";
+import {AudioPlayerStatus, createAudioPlayer, createAudioResource, getVoiceConnection, StreamType} from "@discordjs/voice";
+import type {AudioPlayer} from "@discordjs/voice";
 import {Readable} from "node:stream";
 import {VoicevoxClient} from "../util/voicevoxClient.js";
 
@@ -7,6 +8,38 @@ if (!VoicevoxClient.baseUrl) {
 }
 
 class VoicevoxService {
+  private queues = new Map<string, Buffer[]>();
+  private players = new Map<string, AudioPlayer>();
+
+  private getOrCreatePlayer(guildId: string): AudioPlayer {
+    const existing = this.players.get(guildId);
+    if (existing) return existing;
+
+    const player = createAudioPlayer();
+    player.on(AudioPlayerStatus.Idle, () => {
+      this.playNext(guildId);
+    });
+    this.players.set(guildId, player);
+    return player;
+  }
+
+  private playNext(guildId: string): void {
+    const queue = this.queues.get(guildId);
+    if (!queue || queue.length === 0) return;
+
+    const voice = getVoiceConnection(guildId);
+    if (!voice) return;
+
+    const buf = queue.shift()!;
+    const player = this.getOrCreatePlayer(guildId);
+    const resource = createAudioResource(
+      Readable.from(buf),
+      {inputType: StreamType.Arbitrary}
+    );
+    voice.subscribe(player);
+    player.play(resource);
+  }
+
   async speak(guildId: string, text: string): Promise<void> {
     if (!VoicevoxClient.baseUrl) return;
     const voice = getVoiceConnection(guildId);
@@ -14,14 +47,17 @@ class VoicevoxService {
 
     try {
       const query = await VoicevoxClient.createAudioQuery(text, 1);
-      const buf = await VoicevoxClient.synthesis(query, 1);
-      const player = createAudioPlayer();
-      const resource = createAudioResource(
-        Readable.from(Buffer.from(buf)),
-        {inputType: StreamType.Arbitrary}
-      );
-      player.play(resource);
-      voice.subscribe(player);
+      const buf = Buffer.from(await VoicevoxClient.synthesis(query, 1));
+
+      if (!this.queues.has(guildId)) {
+        this.queues.set(guildId, []);
+      }
+      this.queues.get(guildId)!.push(buf);
+
+      const player = this.getOrCreatePlayer(guildId);
+      if (player.state.status === AudioPlayerStatus.Idle) {
+        this.playNext(guildId);
+      }
     } catch (e) {
       console.error(e);
     }
