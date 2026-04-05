@@ -38,9 +38,9 @@ export async function preprocessForTTS(message: Message, textOverride?: string):
   // 添付ファイル
   const attachmentCount = message.attachments.size;
   if (attachmentCount === 1) {
-    text = (text.trim() + " 添付ファイル").trim();
+    text = ("添付ファイル " + text.trim()).trim();
   } else if (attachmentCount > 1) {
-    text = (text.trim() + ` ${attachmentCount}個の添付ファイル`).trim();
+    text = (`${attachmentCount}個の添付ファイル ` + text.trim()).trim();
   }
 
   return text.trim();
