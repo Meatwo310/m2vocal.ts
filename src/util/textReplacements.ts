@@ -45,27 +45,40 @@ export async function preprocessForTTS(message: Message, textOverride?: string):
 
 async function replaceMentions(message: Message, text: string): Promise<string> {
   const mentionRegex = /<@!?(\d+)>/g;
-  const matches = [...text.matchAll(mentionRegex)];
+  const userIds = [...new Set([...text.matchAll(mentionRegex)].map((m) => m[1]))];
+  if (userIds.length === 0) return text;
 
-  for (const match of matches) {
-    const userId = match[1];
-    let displayName: string;
+  // メッセージに付属するキャッシュ済みメンバー情報を優先して使用
+  const nameMap = new Map<string, string>();
+  const uncachedIds: string[] = [];
 
-    if (message.guild) {
-      try {
-        const member = await message.guild.members.fetch(userId);
-        displayName = member.displayName;
-      } catch {
-        displayName = `ユーザー${userId}`;
-      }
+  for (const userId of userIds) {
+    const cached = message.mentions.members?.get(userId) ?? message.mentions.users.get(userId);
+    if (cached) {
+      nameMap.set(userId, cached.displayName);
     } else {
-      displayName = `ユーザー${userId}`;
+      uncachedIds.push(userId);
     }
-
-    text = text.replace(match[0], displayName);
   }
 
-  return text;
+  // キャッシュにない ID だけ並列 fetch
+  if (uncachedIds.length > 0 && message.guild) {
+    await Promise.all(
+      uncachedIds.map(async (userId) => {
+        try {
+          const member = await message.guild!.members.fetch(userId);
+          nameMap.set(userId, member.displayName);
+        } catch {
+          nameMap.set(userId, `ユーザー${userId}`);
+        }
+      })
+    );
+  }
+  for (const userId of uncachedIds) {
+    if (!nameMap.has(userId)) nameMap.set(userId, `ユーザー${userId}`);
+  }
+
+  return text.replace(mentionRegex, (_, userId: string) => nameMap.get(userId) ?? `ユーザー${userId}`);
 }
 
 function urlToDomain(url: string): string {
