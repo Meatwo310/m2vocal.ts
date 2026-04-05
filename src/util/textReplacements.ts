@@ -26,6 +26,9 @@ export async function preprocessForTTS(message: Message, textOverride?: string):
   // メンション: <@!?id> → 表示名
   text = await replaceMentions(message, text);
 
+  // チャンネルメンション: <#id> → チャンネル名
+  text = await replaceChannelMentions(message, text);
+
   // URL (<URL> 形式) → ドメイン
   text = text.replace(/<(https?:\/\/[^\s>]*)>/g, (_, url: string) => urlToDomain(url));
 
@@ -79,6 +82,32 @@ async function replaceMentions(message: Message, text: string): Promise<string> 
   }
 
   return text.replace(mentionRegex, (_, userId: string) => nameMap.get(userId) ?? `ユーザー${userId}`);
+}
+
+async function replaceChannelMentions(message: Message, text: string): Promise<string> {
+  const channelRegex = /<#(\d+)>/g;
+  const channelIds = [...new Set([...text.matchAll(channelRegex)].map((m) => m[1]))];
+  if (channelIds.length === 0) return text;
+
+  const nameMap = new Map<string, string>();
+
+  await Promise.all(
+    channelIds.map(async (channelId) => {
+      try {
+        const channel = message.guild?.channels.cache.get(channelId)
+          ?? await message.guild?.channels.fetch(channelId);
+        if (channel && "name" in channel && channel.name) {
+          nameMap.set(channelId, channel.name);
+        } else {
+          nameMap.set(channelId, `チャンネル${channelId}`);
+        }
+      } catch {
+        nameMap.set(channelId, `チャンネル${channelId}`);
+      }
+    })
+  );
+
+  return text.replace(channelRegex, (_, channelId: string) => nameMap.get(channelId) ?? `チャンネル${channelId}`);
 }
 
 function urlToDomain(url: string): string {
