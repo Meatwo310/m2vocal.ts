@@ -1,31 +1,7 @@
-import {type ArgsOf, Discord, Guard, On} from "discordx";
-import {isAsciiOnly, romajiToJapanese} from "../util/converter.js";
-import {NotBot} from "@discordx/utilities";
-
-@Discord()
-export class Conversion {
-  @On()
-  @Guard(NotBot)
-  async messageCreate([message]: ArgsOf<"messageCreate">): Promise<void> {
-    const text = message.content;
-    if (!shouldConvert(text)) {
-      return;
-    }
-
-    let converted: string;
-    try {
-      converted = await romajiToJapanese(text);
-    } catch (e) {
-      console.error(e);
-      return;
-    }
-
-    await message.reply({ content: converted, allowedMentions: {} });
-  }
-}
+import {isAsciiOnly} from "../util/converter.js";
 
 const ignorePattern = /https?:\/\/|<(@|a?:)/;
 
-function shouldConvert(text: string): boolean {
+export function shouldConvert(text: string): boolean {
   return isAsciiOnly(text) && !ignorePattern.test(text);
 }
