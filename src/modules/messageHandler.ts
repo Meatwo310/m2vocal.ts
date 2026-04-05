@@ -23,7 +23,7 @@ export class MessageHandler {
 
     // チャット返信（変換できた場合のみ）
     if (converted !== null) {
-      await message.reply({ content: converted, allowedMentions: {} });
+      await message.reply({ content: converted, allowedMentions: {} }).catch((e) => console.error(e));
     }
 
     // VC読み上げ（変換結果 or 元テキスト）
