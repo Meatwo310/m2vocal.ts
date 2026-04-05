@@ -23,11 +23,14 @@ FROM node:lts-alpine as prod-runner
 # Set work directory
 WORKDIR /app
 
+# Install system ffmpeg (used instead of ffmpeg-static)
+RUN apk add --no-cache ffmpeg
+
 # Copy package.json from build-runner
 COPY --from=build-runner /tmp/app/package.json /app/package.json
 
-# Install dependencies
-RUN npm install --omit=dev
+# Install dependencies (skip optional ffmpeg-static, use system ffmpeg)
+RUN npm install --omit=dev --no-optional
 
 # Move build files
 COPY --from=build-runner /tmp/app/build /app/build
