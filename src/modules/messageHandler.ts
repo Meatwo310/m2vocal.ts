@@ -3,6 +3,7 @@ import {NotBot} from "@discordx/utilities";
 import {shouldConvert} from "./conversion.js";
 import {romajiToJapanese} from "../util/converter.js";
 import {voicevoxService} from "./voicevox.js";
+import {preprocessForTTS} from "../util/textReplacements.js";
 
 @Discord()
 export class MessageHandler {
@@ -26,9 +27,9 @@ export class MessageHandler {
       await message.reply({ content: converted, allowedMentions: {} }).catch((e) => console.error(e));
     }
 
-    // VC読み上げ（変換結果 or 元テキスト）
+    // VC読み上げ（変換結果 or 元テキストをTTS用に前処理）
     if (message.guildId) {
-      let speakText = converted ?? text;
+      let speakText = await preprocessForTTS(message, converted ?? undefined);
       if (speakText.length > 100) {
         speakText = speakText.slice(0, 90) + "、以下略";
       }
