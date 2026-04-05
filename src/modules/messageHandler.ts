@@ -28,7 +28,11 @@ export class MessageHandler {
 
     // VC読み上げ（変換結果 or 元テキスト）
     if (message.guildId) {
-      await voicevoxService.speak(message.guildId, converted ?? text);
+      let speakText = converted ?? text;
+      if (speakText.length > 100) {
+        speakText = speakText.slice(0, 90) + "、以下略";
+      }
+      await voicevoxService.speak(message.guildId, speakText);
     }
   }
 }
