@@ -23,6 +23,9 @@ FROM node:lts-alpine as prod-runner
 # Set work directory
 WORKDIR /app
 
+# Install ffmpeg
+RUN apk add --no-cache ffmpeg
+
 # Copy package.json from build-runner
 COPY --from=build-runner /tmp/app/package.json /app/package.json
 
