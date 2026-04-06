@@ -1,10 +1,11 @@
-import {ArgsOf, Client, Discord, On, Slash} from "discordx";
-import {CommandInteraction, GuildMember, VoiceBasedChannel} from "discord.js";
+import {ArgsOf, Client, Discord, On, Slash, SlashOption} from "discordx";
+import {ApplicationCommandOptionType, CommandInteraction, GuildMember, VoiceBasedChannel} from "discord.js";
 import {entersState, getVoiceConnection, joinVoiceChannel, VoiceConnectionStatus} from "@discordjs/voice";
 import {bot} from "../bot.js";
 import {VoicevoxClient} from "../util/voicevoxClient";
 import {ttsChannelStore} from "./ttsChannelStore.js";
 import {voicevoxService} from "./voicevoxService";
+import {resolveGuildSpeakerId, setGuildSpeaker, setUserSpeaker} from "../db/index.js";
 
 @Discord()
 export class Voice {
@@ -59,7 +60,8 @@ export class Voice {
     await interaction.editReply(message);
 
     try {
-      await voicevoxService.speak(guild.id, `接続しました`);
+      const speakerId = resolveGuildSpeakerId(guild.id);
+      await voicevoxService.speak(guild.id, `接続しました`, speakerId);
     } catch (e) {
       console.error(e);
     }
@@ -96,6 +98,40 @@ export class Voice {
     await interaction.reply('👋 VCから切断しました');
   }
 
+  @Slash({ description: "自分の話者IDを設定します" })
+  async voice(
+    @SlashOption({
+      name: "speaker_id",
+      description: "VOICEVOXの話者ID",
+      type: ApplicationCommandOptionType.Integer,
+      required: true,
+    })
+    speakerId: number,
+    interaction: CommandInteraction
+  ): Promise<void> {
+    setUserSpeaker(interaction.user.id, speakerId);
+    await interaction.reply(`✅ 話者IDを **${speakerId}** に設定しました`);
+  }
+
+  @Slash({ name: "voice-default", description: "ギルドのデフォルト話者IDを設定します" })
+  async voiceDefault(
+    @SlashOption({
+      name: "speaker_id",
+      description: "VOICEVOXの話者ID",
+      type: ApplicationCommandOptionType.Integer,
+      required: true,
+    })
+    speakerId: number,
+    interaction: CommandInteraction
+  ): Promise<void> {
+    if (!interaction.guild) {
+      await interaction.reply('💥 サーバー情報の取得に失敗しました');
+      return;
+    }
+    setGuildSpeaker(interaction.guild.id, speakerId);
+    await interaction.reply(`✅ ギルドのデフォルト話者IDを **${speakerId}** に設定しました`);
+  }
+
   @On({ event: "voiceStateUpdate" })
   async onVoiceStateUpdate([oldState, newState]: ArgsOf<"voiceStateUpdate">, client: Client): Promise<void> {
     if (oldState.channelId === newState.channelId) {
@@ -109,10 +145,11 @@ export class Voice {
     }
 
     try {
+      const speakerId = resolveGuildSpeakerId(guildId);
       if (!newState.channelId && oldState.channelId == currentChannelId && oldState.member && !oldState.member.user.bot) {
-        await voicevoxService.speak(guildId, `${oldState.member.displayName}さんが退出しました`);
+        await voicevoxService.speak(guildId, `${oldState.member.displayName}さんが退出しました`, speakerId);
       } else if (!oldState.channelId && newState.channelId === currentChannelId && newState.member && !newState.member.user.bot) {
-        await voicevoxService.speak(guildId, `${newState.member.displayName}さんが入室しました`);
+        await voicevoxService.speak(guildId, `${newState.member.displayName}さんが入室しました`, speakerId);
       }
     } catch (e) {
       console.error(e);

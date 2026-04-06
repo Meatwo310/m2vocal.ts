@@ -5,6 +5,7 @@ import {romajiToJapanese} from "../util/converter.js";
 import {voicevoxService} from "./voicevoxService";
 import {preprocessForTTS} from "../util/textReplacements.js";
 import {ttsChannelStore} from "./ttsChannelStore.js";
+import {resolveSpeakerId} from "../db/index.js";
 
 @Discord()
 export class MessageHandler {
@@ -38,7 +39,8 @@ export class MessageHandler {
       if (speakText.length > 100) {
         speakText = speakText.slice(0, 90) + "、以下略";
       }
-      await voicevoxService.speak(message.guildId, speakText);
+      const speakerId = resolveSpeakerId(message.author.id, message.guildId);
+      await voicevoxService.speak(message.guildId, speakText, speakerId);
     }
   }
 }

@@ -49,14 +49,14 @@ class VoicevoxService {
     return false;
   }
 
-  async speak(guildId: string, text: string): Promise<void> {
+  async speak(guildId: string, text: string, speakerId: number = 1): Promise<void> {
     if (!VoicevoxClient.baseUrl) return;
     const voice = getVoiceConnection(guildId);
     if (!voice) return;
 
     try {
-      const query = await VoicevoxClient.createAudioQuery(text, 1);
-      const buf = Buffer.from(await VoicevoxClient.synthesis(query, 1));
+      const query = await VoicevoxClient.createAudioQuery(text, speakerId);
+      const buf = Buffer.from(await VoicevoxClient.synthesis(query, speakerId));
 
       if (!this.queues.has(guildId)) {
         this.queues.set(guildId, []);
