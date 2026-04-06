@@ -2,7 +2,7 @@ import {type ArgsOf, Discord, Guard, On} from "discordx";
 import {NotBot} from "@discordx/utilities";
 import {shouldConvert} from "./conversion.js";
 import {romajiToJapanese} from "../util/converter.js";
-import {voicevoxService} from "./voicevox.js";
+import {voicevoxService} from "./voicevoxService";
 import {preprocessForTTS} from "../util/textReplacements.js";
 import {ttsChannelStore} from "./ttsChannelStore.js";
 
