@@ -1,4 +1,5 @@
 import type {Message} from "discord.js";
+import {unemojify} from "node-emoji";
 
 /**
  * TTS読み上げ用にメッセージテキストを前処理する
@@ -42,6 +43,11 @@ export async function preprocessForTTS(message: Message, textOverride?: string):
   } else if (attachmentCount > 1) {
     text = (`${attachmentCount}個の添付ファイル ` + text.trim()).trim();
   }
+
+  // Unicode絵文字 → :絵文字名:
+  text = unemojify(text)
+    .replaceAll(":+1:", ":thumbsup:")
+    .replaceAll(":-1:", ":thumbsdown:");
 
   return text.replaceAll("\n", " ").trim();
 }
