@@ -117,6 +117,24 @@ export class Voice {
     } catch (e) {
       console.error(e);
     }
+
+    // 誰かがBotのいるチャンネルから退出した場合、Botのみ残っていれば自動切断
+    if (oldState.channelId === currentChannelId && newState.channelId !== currentChannelId) {
+      const currentChannel = oldState.channel;
+      if (!currentChannel) {
+        return;
+      }
+
+      const nonBotMembers = currentChannel.members.filter(m => !m.user.bot);
+      if (nonBotMembers.size !== 0) {
+        return;
+      }
+
+      console.log('自動退出: Botのみになったため切断しました');
+      const connection = getVoiceConnection(guildId);
+      connection?.destroy();
+      ttsChannelStore.delete(guildId);
+    }
   }
 }
 
