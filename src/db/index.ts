@@ -18,6 +18,16 @@ sqlite.exec(`
 
 export const db = drizzle(sqlite, { schema });
 
+export function getUserSpeaker(userId: string): number | null {
+  const row = db.select().from(userSpeakers).where(eq(userSpeakers.userId, userId)).get();
+  return row?.speakerId ?? null;
+}
+
+export function getGuildSpeaker(guildId: string): number | null {
+  const row = db.select().from(guildSpeakers).where(eq(guildSpeakers.guildId, guildId)).get();
+  return row?.speakerId ?? null;
+}
+
 export function setUserSpeaker(userId: string, speakerId: number): void {
   db.insert(userSpeakers)
     .values({ userId, speakerId })
@@ -30,6 +40,14 @@ export function setGuildSpeaker(guildId: string, speakerId: number): void {
     .values({ guildId, speakerId })
     .onConflictDoUpdate({ target: guildSpeakers.guildId, set: { speakerId } })
     .run();
+}
+
+export function deleteUserSpeaker(userId: string): void {
+  db.delete(userSpeakers).where(eq(userSpeakers.userId, userId)).run();
+}
+
+export function deleteGuildSpeaker(guildId: string): void {
+  db.delete(guildSpeakers).where(eq(guildSpeakers.guildId, guildId)).run();
 }
 
 /** ユーザー設定 → ギルドデフォルト → 1 の順に解決 */

@@ -5,7 +5,7 @@ import {bot} from "../bot.js";
 import {VoicevoxClient} from "../util/voicevoxClient";
 import {ttsChannelStore} from "./ttsChannelStore.js";
 import {voicevoxService} from "./voicevoxService";
-import {resolveGuildSpeakerId, setGuildSpeaker, setUserSpeaker} from "../db/index.js";
+import {deleteGuildSpeaker, deleteUserSpeaker, getGuildSpeaker, getUserSpeaker, resolveGuildSpeakerId, setGuildSpeaker, setUserSpeaker} from "../db/index.js";
 
 @Discord()
 export class Voice {
@@ -98,37 +98,65 @@ export class Voice {
     await interaction.reply('👋 VCから切断しました');
   }
 
-  @Slash({ description: "自分の話者IDを設定します" })
+  @Slash({ description: "自分の話者IDを表示・設定します（0でリセット）" })
   async voice(
     @SlashOption({
       name: "speaker_id",
-      description: "VOICEVOXの話者ID",
+      description: "VOICEVOXの話者ID（省略で現在値を表示、0でリセット）",
       type: ApplicationCommandOptionType.Integer,
-      required: true,
+      required: false,
     })
-    speakerId: number,
+    speakerId: number | null,
     interaction: CommandInteraction
   ): Promise<void> {
-    setUserSpeaker(interaction.user.id, speakerId);
+    const userId = interaction.user.id;
+    if (speakerId == null) {
+      const current = getUserSpeaker(userId);
+      await interaction.reply(current != null
+        ? `現在の話者ID: **${current}**`
+        : `話者IDは設定されていません`
+      );
+      return;
+    }
+    if (speakerId === 0) {
+      deleteUserSpeaker(userId);
+      await interaction.reply(`🗑️ 話者IDの設定をリセットしました`);
+      return;
+    }
+    setUserSpeaker(userId, speakerId);
     await interaction.reply(`✅ 話者IDを **${speakerId}** に設定しました`);
   }
 
-  @Slash({ name: "voice-default", description: "ギルドのデフォルト話者IDを設定します" })
+  @Slash({ name: "voice-default", description: "サーバーのデフォルト話者IDを表示・設定します（0でリセット）" })
   async voiceDefault(
     @SlashOption({
       name: "speaker_id",
-      description: "VOICEVOXの話者ID",
+      description: "VOICEVOXの話者ID（省略で現在値を表示、0でリセット）",
       type: ApplicationCommandOptionType.Integer,
-      required: true,
+      required: false,
     })
-    speakerId: number,
+    speakerId: number | null,
     interaction: CommandInteraction
   ): Promise<void> {
     if (!interaction.guild) {
       await interaction.reply('💥 サーバー情報の取得に失敗しました');
       return;
     }
-    setGuildSpeaker(interaction.guild.id, speakerId);
+    const guildId = interaction.guild.id;
+    if (speakerId == null) {
+      const current = getGuildSpeaker(guildId);
+      await interaction.reply(current != null
+        ? `現在のデフォルト話者ID: **${current}**`
+        : `デフォルト話者IDは設定されていません`
+      );
+      return;
+    }
+    if (speakerId === 0) {
+      deleteGuildSpeaker(guildId);
+      await interaction.reply(`🗑️ デフォルト話者IDの設定をリセットしました`);
+      return;
+    }
+    setGuildSpeaker(guildId, speakerId);
     await interaction.reply(`✅ ギルドのデフォルト話者IDを **${speakerId}** に設定しました`);
   }
 
