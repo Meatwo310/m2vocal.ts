@@ -4,6 +4,7 @@ import {entersState, getVoiceConnection, joinVoiceChannel, VoiceConnectionStatus
 import {bot} from "../bot.js";
 import {VoicevoxClient} from "../util/voicevoxClient";
 import {ttsChannelStore} from "./ttsChannelStore.js";
+import {voicevoxService} from "./voicevoxService";
 
 @Discord()
 export class Voice {
@@ -52,10 +53,16 @@ export class Voice {
     if (voicevoxVersion) {
       message += `VOICEVOX: ${voicevoxVersion}`;
     } else {
-      message += `VOICEVOX: 利用不可`
+      message += `VOICEVOX: 利用不可`;
     }
     ttsChannelStore.set(guild.id, interaction.channelId);
     await interaction.editReply(message);
+
+    try {
+      await voicevoxService.speak(guild.id, `接続しました`);
+    } catch (e) {
+      console.error(e);
+    }
   }
 
   @Slash({ description: "stop" })
