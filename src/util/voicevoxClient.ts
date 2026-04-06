@@ -1,5 +1,17 @@
 export type AudioQuery = Record<string, unknown>;
 
+export type SpeakerStyle = {
+  name: string;
+  id: number;
+};
+
+export type Speaker = {
+  name: string;
+  speaker_uuid: string;
+  styles: SpeakerStyle[];
+  version: string;
+};
+
 export class VoicevoxClient {
   static baseUrl: string | null = process.env.VOICEVOX_URL ?? null;
 
@@ -10,6 +22,15 @@ export class VoicevoxClient {
     const res = await fetch(url, {method: "POST"});
     if (!res.ok) {
       throw new Error(`VOICEVOX audio_query failed: ${res.status} ${res.statusText}`);
+    }
+    return res.json();
+  }
+
+  static async getSpeakers(): Promise<Speaker[]> {
+    const url = new URL("/speakers", this.baseUrl!);
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`VOICEVOX speakers failed: ${res.status} ${res.statusText}`);
     }
     return res.json();
   }

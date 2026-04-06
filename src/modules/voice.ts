@@ -2,7 +2,7 @@ import {ArgsOf, Client, Discord, On, Slash, SlashOption} from "discordx";
 import {ApplicationCommandOptionType, CommandInteraction, GuildMember, VoiceBasedChannel} from "discord.js";
 import {entersState, getVoiceConnection, joinVoiceChannel, VoiceConnectionStatus} from "@discordjs/voice";
 import {bot} from "../bot.js";
-import {VoicevoxClient} from "../util/voicevoxClient";
+import {Speaker, VoicevoxClient} from "../util/voicevoxClient";
 import {ttsChannelStore} from "./ttsChannelStore.js";
 import {voicevoxService} from "./voicevoxService";
 import {deleteGuildSpeaker, deleteUserSpeaker, getGuildSpeaker, getUserSpeaker, resolveGuildSpeakerId, setGuildSpeaker, setUserSpeaker} from "../db/index.js";
@@ -112,10 +112,13 @@ export class Voice {
     const userId = interaction.user.id;
     if (speakerId == null) {
       const current = getUserSpeaker(userId);
-      await interaction.reply(current != null
-        ? `現在の話者ID: **${current}**`
-        : `話者IDは設定されていません`
-      );
+      if (current == null) {
+        await interaction.reply(`話者IDは設定されていません`);
+        return;
+      }
+      await interaction.deferReply();
+      const label = await resolveSpeakerLabel(current);
+      await interaction.editReply(`現在の話者ID: **${current}**${label}`);
       return;
     }
     if (speakerId === 0) {
@@ -123,8 +126,15 @@ export class Voice {
       await interaction.reply(`🗑️ 話者IDの設定をリセットしました`);
       return;
     }
+    await interaction.deferReply();
+    const speakers = await fetchSpeakersOrNull();
+    if (speakers && !findSpeakerStyle(speakers, speakerId)) {
+      await interaction.editReply(`❌ 話者ID **${speakerId}** はVOICEVOXに存在しません`);
+      return;
+    }
     setUserSpeaker(userId, speakerId);
-    await interaction.reply(`✅ 話者IDを **${speakerId}** に設定しました`);
+    const label = speakers ? (findSpeakerStyleLabel(speakers, speakerId) ?? "") : "";
+    await interaction.editReply(`✅ 話者IDを **${speakerId}**${label} に設定しました`);
   }
 
   @Slash({ name: "voice-default", description: "サーバーのデフォルト話者IDを表示・設定します（0でリセット）" })
@@ -145,10 +155,13 @@ export class Voice {
     const guildId = interaction.guild.id;
     if (speakerId == null) {
       const current = getGuildSpeaker(guildId);
-      await interaction.reply(current != null
-        ? `現在のデフォルト話者ID: **${current}**`
-        : `デフォルト話者IDは設定されていません`
-      );
+      if (current == null) {
+        await interaction.reply(`デフォルト話者IDは設定されていません`);
+        return;
+      }
+      await interaction.deferReply();
+      const label = await resolveSpeakerLabel(current);
+      await interaction.editReply(`現在のデフォルト話者ID: **${current}**${label}`);
       return;
     }
     if (speakerId === 0) {
@@ -156,8 +169,15 @@ export class Voice {
       await interaction.reply(`🗑️ デフォルト話者IDの設定をリセットしました`);
       return;
     }
+    await interaction.deferReply();
+    const speakers = await fetchSpeakersOrNull();
+    if (speakers && !findSpeakerStyle(speakers, speakerId)) {
+      await interaction.editReply(`❌ 話者ID **${speakerId}** はVOICEVOXに存在しません`);
+      return;
+    }
     setGuildSpeaker(guildId, speakerId);
-    await interaction.reply(`✅ ギルドのデフォルト話者IDを **${speakerId}** に設定しました`);
+    const label = speakers ? (findSpeakerStyleLabel(speakers, speakerId) ?? "") : "";
+    await interaction.editReply(`✅ ギルドのデフォルト話者IDを **${speakerId}**${label} に設定しました`);
   }
 
   @On({ event: "voiceStateUpdate" })
@@ -201,6 +221,33 @@ export class Voice {
       ttsChannelStore.delete(guildId);
     }
   }
+}
+
+function findSpeakerStyle(speakers: Speaker[], styleId: number) {
+  for (const speaker of speakers) {
+    const style = speaker.styles.find(s => s.id === styleId);
+    if (style) return { speaker, style };
+  }
+  return null;
+}
+
+function findSpeakerStyleLabel(speakers: Speaker[], styleId: number): string | null {
+  const found = findSpeakerStyle(speakers, styleId);
+  return found ? ` (${found.speaker.name} / ${found.style.name})` : null;
+}
+
+async function fetchSpeakersOrNull(): Promise<Speaker[] | null> {
+  try {
+    return await VoicevoxClient.getSpeakers();
+  } catch {
+    return null;
+  }
+}
+
+async function resolveSpeakerLabel(styleId: number): Promise<string> {
+  const speakers = await fetchSpeakersOrNull();
+  if (!speakers) return "";
+  return findSpeakerStyleLabel(speakers, styleId) ?? "";
 }
 
 /**
