@@ -1,11 +1,26 @@
 import {ArgsOf, Client, Discord, On, Slash, SlashOption} from "discordx";
-import {ApplicationCommandOptionType, CommandInteraction, GuildMember, VoiceBasedChannel} from "discord.js";
+import {
+  ApplicationCommandOptionType,
+  CommandInteraction,
+  EmbedBuilder,
+  GuildMember,
+  MessageFlags,
+  VoiceBasedChannel
+} from "discord.js";
 import {entersState, getVoiceConnection, joinVoiceChannel, VoiceConnectionStatus} from "@discordjs/voice";
 import {bot} from "../bot.js";
 import {Speaker, VoicevoxClient} from "../util/voicevoxClient";
 import {ttsChannelStore} from "./ttsChannelStore.js";
 import {voicevoxService} from "./voicevoxService";
-import {deleteGuildSpeaker, deleteUserSpeaker, getGuildSpeaker, getUserSpeaker, resolveGuildSpeakerId, setGuildSpeaker, setUserSpeaker} from "../db/index.js";
+import {
+  deleteGuildSpeaker,
+  deleteUserSpeaker,
+  getGuildSpeaker,
+  getUserSpeaker,
+  resolveGuildSpeakerId,
+  setGuildSpeaker,
+  setUserSpeaker
+} from "../db/index.js";
 
 @Discord()
 export class Voice {
@@ -178,6 +193,36 @@ export class Voice {
     setGuildSpeaker(guildId, speakerId);
     const label = speakers ? (findSpeakerStyleLabel(speakers, speakerId) ?? "") : "";
     await interaction.editReply(`✅ ギルドのデフォルト話者IDを **${speakerId}**${label} に設定しました`);
+  }
+
+  @Slash({ description: "VOICEVOXの話者一覧を表示します" })
+  async speakers(interaction: CommandInteraction): Promise<void> {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    const speakers = await fetchSpeakersOrNull();
+    if (!speakers) {
+      await interaction.editReply("❌ VOICEVOXから話者一覧を取得できませんでした");
+      return;
+    }
+
+    const fields = speakers.map(speaker => ({
+      name: speaker.name,
+      value: speaker.styles.map(s => `\`${s.id}\` ${s.name}`).join("\n"),
+      inline: true,
+    }));
+
+    // Embed は最大25フィールド、メッセージは最大10 Embed
+    const FIELDS_PER_EMBED = 25;
+    const embeds: EmbedBuilder[] = [];
+    for (let i = 0; i < fields.length; i += FIELDS_PER_EMBED) {
+      const chunk = fields.slice(i, i + FIELDS_PER_EMBED);
+      const embed = new EmbedBuilder()
+        .setTitle(i === 0 ? "🎙️ VOICEVOX 話者一覧" : null)
+        .setColor(0x7289da)
+        .addFields(chunk);
+      embeds.push(embed);
+    }
+
+    await interaction.editReply({ embeds });
   }
 
   @On({ event: "voiceStateUpdate" })
