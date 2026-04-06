@@ -1,4 +1,4 @@
-import {Discord, Slash} from "discordx";
+import {ArgsOf, Client, Discord, On, Slash} from "discordx";
 import {CommandInteraction, GuildMember, VoiceBasedChannel} from "discord.js";
 import {entersState, getVoiceConnection, joinVoiceChannel, VoiceConnectionStatus} from "@discordjs/voice";
 import {bot} from "../bot.js";
@@ -82,6 +82,29 @@ export class Voice {
     connection.destroy();
     ttsChannelStore.delete(guild.id);
     await interaction.reply('👋 VCから切断しました');
+  }
+
+  @On({ event: "voiceStateUpdate" })
+  async onVoiceStateUpdate([oldState, newState]: ArgsOf<"voiceStateUpdate">, client: Client): Promise<void> {
+    if (oldState.channelId === newState.channelId) {
+      return;
+    }
+
+    const guildId = newState.guild.id;
+    const currentChannelId = getVoiceConnection(guildId)?.joinConfig.channelId;
+    if (!currentChannelId) {
+      return;
+    }
+
+    try {
+      if (!newState.channelId && oldState.channelId == currentChannelId && oldState.member && !oldState.member.user.bot) {
+        await voicevoxService.speak(guildId, `${oldState.member.displayName}さんが退出しました`);
+      } else if (!oldState.channelId && newState.channelId === currentChannelId && newState.member && !newState.member.user.bot) {
+        await voicevoxService.speak(guildId, `${newState.member.displayName}さんが入室しました`);
+      }
+    } catch (e) {
+      console.error(e);
+    }
   }
 }
 
