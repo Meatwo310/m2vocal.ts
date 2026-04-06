@@ -65,6 +65,18 @@ export class Voice {
     }
   }
 
+  @Slash({ description: "skip" })
+  async skip(interaction: CommandInteraction): Promise<void> {
+    const guild = interaction.guild;
+    if (!guild) {
+      await interaction.reply('💥 サーバー情報の取得に失敗しました');
+      return;
+    }
+
+    const skipped = voicevoxService.skip(guild.id);
+    await interaction.reply({ content: skipped ? '⏭️ スキップしました' : '🤔 スキップするものがありません', fetchReply: false });
+  }
+
   @Slash({ description: "stop" })
   async stop(interaction: CommandInteraction): Promise<void> {
     let guild = interaction.guild;

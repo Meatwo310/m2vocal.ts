@@ -40,6 +40,15 @@ class VoicevoxService {
     player.play(resource);
   }
 
+  skip(guildId: string): boolean {
+    const player = this.players.get(guildId);
+    if (player && player.state.status !== AudioPlayerStatus.Idle) {
+      player.stop();
+      return true;
+    }
+    return false;
+  }
+
   async speak(guildId: string, text: string): Promise<void> {
     if (!VoicevoxClient.baseUrl) return;
     const voice = getVoiceConnection(guildId);

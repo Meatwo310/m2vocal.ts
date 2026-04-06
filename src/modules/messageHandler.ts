@@ -30,6 +30,10 @@ export class MessageHandler {
 
     // VC読み上げ（変換結果 or 元テキストをTTS用に前処理）
     if (message.guildId && ttsChannelStore.get(message.guildId) === message.channelId) {
+      if (text === 's') {
+        voicevoxService.skip(message.guildId);
+        return;
+      }
       let speakText = await preprocessForTTS(message, converted ?? undefined);
       if (speakText.length > 100) {
         speakText = speakText.slice(0, 90) + "、以下略";
