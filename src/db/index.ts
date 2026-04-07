@@ -14,6 +14,12 @@ sqlite.exec(`
     guild_id TEXT PRIMARY KEY,
     speaker_id INTEGER NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS guild_dictionary (
+    guild_id TEXT NOT NULL,
+    "from" TEXT NOT NULL,
+    "to" TEXT NOT NULL,
+    PRIMARY KEY (guild_id, "from")
+  );
 `);
 
 export const db = drizzle(sqlite, { schema });
@@ -59,6 +65,29 @@ export function resolveSpeakerId(userId: string, guildId: string): number {
   if (guildRow) return guildRow.speakerId;
 
   return 1;
+}
+
+export function getGuildDictionary(guildId: string): { from: string; to: string }[] {
+  return sqlite
+    .prepare(`SELECT "from", "to" FROM guild_dictionary WHERE guild_id = ? ORDER BY "from"`)
+    .all(guildId) as { from: string; to: string }[];
+}
+
+export function setDictEntry(guildId: string, from: string, to: string): void {
+  sqlite
+    .prepare(
+      `INSERT INTO guild_dictionary (guild_id, "from", "to") VALUES (?, ?, ?)
+       ON CONFLICT(guild_id, "from") DO UPDATE SET "to" = excluded."to"`
+    )
+    .run(guildId, from, to);
+}
+
+/** @returns 削除された場合 true */
+export function deleteDictEntry(guildId: string, from: string): boolean {
+  const result = sqlite
+    .prepare(`DELETE FROM guild_dictionary WHERE guild_id = ? AND "from" = ?`)
+    .run(guildId, from);
+  return result.changes > 0;
 }
 
 /** ギルドデフォルト → 1 の順に解決（システムメッセージ用） */

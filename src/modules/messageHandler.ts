@@ -5,7 +5,7 @@ import {romajiToJapanese} from "../util/converter.js";
 import {voicevoxService} from "./voicevoxService";
 import {preprocessForTTS} from "../util/textReplacements.js";
 import {ttsChannelStore} from "./ttsChannelStore.js";
-import {resolveSpeakerId} from "../db/index.js";
+import {getGuildDictionary, resolveSpeakerId} from "../db/index.js";
 
 @Discord()
 export class MessageHandler {
@@ -36,6 +36,9 @@ export class MessageHandler {
         return;
       }
       let speakText = await preprocessForTTS(message, converted ?? undefined);
+      for (const entry of getGuildDictionary(message.guildId)) {
+        speakText = speakText.replaceAll(entry.from, entry.to);
+      }
       if (speakText.length > 100) {
         speakText = speakText.slice(0, 90) + "、以下略";
       }
