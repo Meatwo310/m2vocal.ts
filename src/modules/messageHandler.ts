@@ -37,7 +37,11 @@ export class MessageHandler {
       }
       let speakText = await preprocessForTTS(message, converted ?? undefined);
       for (const entry of getGuildDictionary(message.guildId)) {
-        speakText = speakText.replaceAll(entry.from, entry.to);
+        try {
+          speakText = speakText.replace(new RegExp(entry.from, "g"), entry.to);
+        } catch {
+          // 無効なパターンはスキップ
+        }
       }
       if (speakText.length > 100) {
         speakText = speakText.slice(0, 90) + "、以下略";

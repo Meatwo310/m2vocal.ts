@@ -40,8 +40,15 @@ export class Dict {
       return;
     }
 
+    try {
+      new RegExp(from, "g");
+    } catch {
+      await interaction.reply({ content: `❌ **${from}** は無効な正規表現です`, flags: MessageFlags.Ephemeral });
+      return;
+    }
+
     setDictEntry(guildId, from, to);
-    await interaction.reply({ content: `✅ **${from}** → **${to}** を辞書に登録しました` });
+    await interaction.reply({ content: `✅ \`${from}\` → **${to}** を辞書に登録しました` });
   }
 
   @Slash({ description: "辞書の一覧を表示します" })
@@ -57,7 +64,7 @@ export class Dict {
       return;
     }
 
-    const lines = entries.map(e => `**${e.from}** → ${e.to}`);
+    const lines = entries.map(e => `\`${e.from}\` → ${e.to}`);
     const content = `📖 辞書一覧 (${entries.length}件)\n${lines.join("\n")}`;
     await interaction.reply({ content, flags: MessageFlags.Ephemeral });
   }
