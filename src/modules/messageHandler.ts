@@ -5,7 +5,7 @@ import {romajiToJapanese} from "../util/converter.js";
 import {voicevoxService} from "./voicevoxService";
 import {preprocessForTTS} from "../util/textReplacements.js";
 import {ttsChannelStore} from "./ttsChannelStore.js";
-import {getGuildDictionary, getGuildMessageFilters, resolveSpeakerId} from "../db/index.js";
+import {addMessageFilterHit, getGuildDictionary, getGuildMessageFilters, resolveSpeakerId} from "../db/index.js";
 
 @Discord()
 export class MessageHandler {
@@ -32,18 +32,11 @@ export class MessageHandler {
     // メッセージフィルタリング（変換後テキスト優先、変換なしなら元テキストで判定）
     if (message.guildId) {
       const filterText = converted ?? text;
+      const messageLink = `https://discord.com/channels/${message.guildId}/${message.channelId}/${message.id}`;
       for (const filter of getGuildMessageFilters(message.guildId)) {
         try {
           if (new RegExp(filter.pattern).test(filterText)) {
-            const dest = message.client.channels.cache.get(filter.channelId);
-            if (dest?.isSendable()) {
-              await dest
-                .send({
-                  content: `📌 <#${message.channelId}> **${message.author.tag}**: ${filterText}`,
-                  allowedMentions: { parse: [] },
-                })
-                .catch((e: unknown) => console.error(e));
-            }
+            addMessageFilterHit(message.guildId, filter.title, message.author.id, messageLink);
           }
         } catch {
           // 無効なパターンはスキップ
