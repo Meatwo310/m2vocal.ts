@@ -35,22 +35,6 @@ sqlite.exec(`
   );
 `);
 
-// 旧スキーマ (channel_id カラム) が残っていれば破棄して新スキーマで再作成
-{
-  const cols = sqlite.prepare("PRAGMA table_info(guild_message_filters)").all() as { name: string }[];
-  if (cols.some(c => c.name === "channel_id")) {
-    sqlite.exec(`
-      DROP TABLE guild_message_filters;
-      CREATE TABLE guild_message_filters (
-        guild_id TEXT NOT NULL,
-        title TEXT NOT NULL,
-        pattern TEXT NOT NULL,
-        PRIMARY KEY (guild_id, title)
-      );
-    `);
-  }
-}
-
 export const db = drizzle(sqlite, { schema });
 
 export function getUserSpeaker(userId: string): number | null {
