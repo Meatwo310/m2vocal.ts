@@ -20,6 +20,19 @@ sqlite.exec(`
     "to" TEXT NOT NULL,
     PRIMARY KEY (guild_id, "from")
   );
+  CREATE TABLE IF NOT EXISTS guild_message_filters (
+    guild_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    pattern TEXT NOT NULL,
+    PRIMARY KEY (guild_id, title)
+  );
+  CREATE TABLE IF NOT EXISTS guild_message_filter_hits (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    message_link TEXT NOT NULL
+  );
 `);
 
 export const db = drizzle(sqlite, { schema });
@@ -88,6 +101,49 @@ export function deleteDictEntry(guildId: string, from: string): boolean {
     .prepare(`DELETE FROM guild_dictionary WHERE guild_id = ? AND "from" = ?`)
     .run(guildId, from);
   return result.changes > 0;
+}
+
+export function getGuildMessageFilters(guildId: string): { title: string; pattern: string }[] {
+  return sqlite
+    .prepare(`SELECT title, pattern FROM guild_message_filters WHERE guild_id = ? ORDER BY title`)
+    .all(guildId) as { title: string; pattern: string }[];
+}
+
+export function setMessageFilter(guildId: string, title: string, pattern: string): void {
+  sqlite
+    .prepare(
+      `INSERT INTO guild_message_filters (guild_id, title, pattern) VALUES (?, ?, ?)
+       ON CONFLICT(guild_id, title) DO UPDATE SET pattern = excluded.pattern`
+    )
+    .run(guildId, title, pattern);
+}
+
+/** @returns 削除された場合 true */
+export function deleteMessageFilter(guildId: string, title: string): boolean {
+  const result = sqlite
+    .prepare(`DELETE FROM guild_message_filters WHERE guild_id = ? AND title = ?`)
+    .run(guildId, title);
+  return result.changes > 0;
+}
+
+export function addMessageFilterHit(guildId: string, title: string, userId: string, messageLink: string): void {
+  sqlite
+    .prepare(
+      `INSERT INTO guild_message_filter_hits (guild_id, title, user_id, message_link) VALUES (?, ?, ?, ?)`
+    )
+    .run(guildId, title, userId, messageLink);
+}
+
+export function getMessageFilterRanking(guildId: string, title: string): { userId: string; count: number }[] {
+  return sqlite
+    .prepare(
+      `SELECT user_id, COUNT(*) as count
+       FROM guild_message_filter_hits
+       WHERE guild_id = ? AND title = ?
+       GROUP BY user_id
+       ORDER BY count DESC`
+    )
+    .all(guildId, title) as { userId: string; count: number }[];
 }
 
 /** ギルドデフォルト → 1 の順に解決（システムメッセージ用） */

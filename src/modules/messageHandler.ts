@@ -5,7 +5,7 @@ import {romajiToJapanese} from "../util/converter.js";
 import {voicevoxService} from "./voicevoxService";
 import {preprocessForTTS} from "../util/textReplacements.js";
 import {ttsChannelStore} from "./ttsChannelStore.js";
-import {getGuildDictionary, resolveSpeakerId} from "../db/index.js";
+import {addMessageFilterHit, getGuildDictionary, getGuildMessageFilters, resolveSpeakerId} from "../db/index.js";
 
 @Discord()
 export class MessageHandler {
@@ -27,6 +27,21 @@ export class MessageHandler {
     // チャット返信（変換できた場合かつ変換前後でテキストが変わった場合のみ）
     if (converted !== null && converted !== text) {
       await message.reply({ content: converted, allowedMentions: {} }).catch((e) => console.error(e));
+    }
+
+    // メッセージフィルタリング（変換後テキスト優先、変換なしなら元テキストで判定）
+    if (message.guildId) {
+      const filterText = converted ?? text;
+      const messageLink = `https://discord.com/channels/${message.guildId}/${message.channelId}/${message.id}`;
+      for (const filter of getGuildMessageFilters(message.guildId)) {
+        try {
+          if (new RegExp(filter.pattern).test(filterText)) {
+            addMessageFilterHit(message.guildId, filter.title, message.author.id, messageLink);
+          }
+        } catch {
+          // 無効なパターンはスキップ
+        }
+      }
     }
 
     // VC読み上げ（変換結果 or 元テキストをTTS用に前処理）
