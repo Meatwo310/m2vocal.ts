@@ -1,5 +1,6 @@
 import {type ArgsOf, Discord, Guard, On} from "discordx";
 import {NotBot} from "@discordx/utilities";
+import {getVoiceConnection} from "@discordjs/voice";
 import {shouldConvert} from "./conversion.js";
 import {romajiToJapanese} from "../util/converter.js";
 import {voicevoxService} from "./voicevoxService";
@@ -44,8 +45,8 @@ export class MessageHandler {
       }
     }
 
-    // VC読み上げ（変換結果 or 元テキストをTTS用に前処理）
-    if (message.guildId && ttsChannelStore.get(message.guildId) === message.channelId) {
+    // VC読み上げ（明示指定チャンネル、または接続中VCのチャンネルチャット）
+    if (message.guildId && isTtsSourceChannel(message.guildId, message.channelId)) {
       if (text === 's') {
         voicevoxService.skip(message.guildId);
         return;
@@ -65,4 +66,10 @@ export class MessageHandler {
       await voicevoxService.speak(message.guildId, speakText, speakerId);
     }
   }
+}
+
+function isTtsSourceChannel(guildId: string, channelId: string): boolean {
+  const explicitTextChannelId = ttsChannelStore.get(guildId);
+  const connectedVoiceChannelId = getVoiceConnection(guildId)?.joinConfig.channelId;
+  return channelId === explicitTextChannelId || channelId === connectedVoiceChannelId;
 }
