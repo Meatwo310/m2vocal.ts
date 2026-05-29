@@ -118,7 +118,7 @@ async function replaceChannelMentions(message: Message, text: string): Promise<s
 
 function urlToDomain(url: string): string {
   try {
-    const hostname = new URL(url).hostname;
+    const hostname = new URL(url).hostname.replace(/^www\./, "");
     return ` ${hostname.replace(/\./g, "ドット")} `;
   } catch {
     return url;
