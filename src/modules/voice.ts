@@ -113,6 +113,23 @@ export class Voice {
     await interaction.reply('👋 VCから切断しました');
   }
 
+  @Slash({
+    description: "Botプロセスを停止します",
+    dmPermission: false,
+  })
+  async reboot(interaction: CommandInteraction): Promise<void> {
+    if (!interaction.guild) {
+      await interaction.reply({ content: '💥 サーバー情報の取得に失敗しました', flags: MessageFlags.Ephemeral });
+      return;
+    }
+
+    await interaction.reply('♻️ Botプロセスを停止します');
+    setTimeout(() => {
+      bot.destroy();
+      process.exit(0);
+    }, 500).unref();
+  }
+
   @Slash({ description: "自分の話者IDを表示・設定します（0でリセット）" })
   async voice(
     @SlashOption({
