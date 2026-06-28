@@ -8,6 +8,7 @@ import {
   guildMessageFilters,
   guildSpeakers,
   userSpeakers,
+  voiceTextLinks,
 } from "./schema.js";
 
 const sqlite = new Database("data.db");
@@ -38,6 +39,12 @@ sqlite.exec(`
     title TEXT NOT NULL,
     user_id TEXT NOT NULL,
     message_link TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS voice_text_links (
+    guild_id TEXT NOT NULL,
+    voice_channel_id TEXT NOT NULL,
+    text_channel_id TEXT NOT NULL,
+    PRIMARY KEY (guild_id, voice_channel_id)
   );
 `);
 
@@ -162,4 +169,32 @@ export function getMessageFilterRanking(guildId: string, title: string): { userI
 export function resolveGuildSpeakerId(guildId: string): number {
   const guildRow = db.select().from(guildSpeakers).where(eq(guildSpeakers.guildId, guildId)).get();
   return guildRow?.speakerId ?? 1;
+}
+
+export function getVoiceTextLink(guildId: string, voiceChannelId: string): string | null {
+  const row = db
+    .select({ textChannelId: voiceTextLinks.textChannelId })
+    .from(voiceTextLinks)
+    .where(and(eq(voiceTextLinks.guildId, guildId), eq(voiceTextLinks.voiceChannelId, voiceChannelId)))
+    .get();
+  return row?.textChannelId ?? null;
+}
+
+export function setVoiceTextLink(guildId: string, voiceChannelId: string, textChannelId: string): void {
+  db.insert(voiceTextLinks)
+    .values({ guildId, voiceChannelId, textChannelId })
+    .onConflictDoUpdate({
+      target: [voiceTextLinks.guildId, voiceTextLinks.voiceChannelId],
+      set: { textChannelId },
+    })
+    .run();
+}
+
+/** @returns 削除された場合 true */
+export function deleteVoiceTextLink(guildId: string, voiceChannelId: string): boolean {
+  const result = db
+    .delete(voiceTextLinks)
+    .where(and(eq(voiceTextLinks.guildId, guildId), eq(voiceTextLinks.voiceChannelId, voiceChannelId)))
+    .run();
+  return result.changes > 0;
 }

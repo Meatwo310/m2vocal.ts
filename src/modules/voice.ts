@@ -1,8 +1,14 @@
-import {ArgsOf, Client, Discord, On, Slash, SlashOption} from "discordx";
+import {ArgsOf, ButtonComponent, Client, Discord, On, Slash, SlashOption} from "discordx";
 import {
+  ActionRowBuilder,
   ApplicationCommandOptionType,
+  ButtonBuilder,
+  ButtonInteraction,
+  ButtonStyle,
+  ChannelType,
   CommandInteraction,
   EmbedBuilder,
+  Guild,
   GuildMember,
   MessageFlags,
   VoiceBasedChannel
@@ -13,14 +19,19 @@ import {Speaker, VoicevoxClient} from "../util/voicevoxClient";
 import {ttsChannelStore} from "./ttsChannelStore.js";
 import {voicevoxService} from "./voicevoxService";
 import {
+  deleteVoiceTextLink,
   deleteGuildSpeaker,
   deleteUserSpeaker,
   getGuildSpeaker,
   getUserSpeaker,
+  getVoiceTextLink,
   resolveGuildSpeakerId,
+  setVoiceTextLink,
   setGuildSpeaker,
   setUserSpeaker
 } from "../db/index.js";
+
+const JOIN_LINK_BUTTON_PREFIX = "join-linked-vc:";
 
 @Discord()
 export class Voice {
@@ -40,46 +51,96 @@ export class Voice {
     }
 
     await interaction.deferReply();
+    await joinAndAnnounce(
+      voiceChannel,
+      (message) => {
+        ttsChannelStore.set(guild.id, interaction.channelId);
+        return interaction.editReply(message);
+      },
+      () => interaction.editReply('❌ VCへの接続に失敗しました')
+    );
+  }
 
-    const alreadyConnected = voiceChannel.members.has(bot.user?.id || "0")
-    const hasAnotherConnection = !!getVoiceConnection(guild.id);
-    try {
-      await connectWithHandler(voiceChannel);
-    } catch {
-      await interaction.editReply('❌ VCへの接続に失敗しました');
+  @Slash({ description: "実行したテキストチャンネルをVCに紐づけます" })
+  async link(
+    @SlashOption({
+      name: "vc",
+      description: "紐づけるボイスチャンネル",
+      type: ApplicationCommandOptionType.Channel,
+      channelTypes: [ChannelType.GuildVoice, ChannelType.GuildStageVoice],
+      required: true,
+    })
+    voiceChannel: VoiceBasedChannel,
+    interaction: CommandInteraction
+  ): Promise<void> {
+    const guild = interaction.guild;
+    if (!guild) {
+      await interaction.reply('💥 サーバー情報の取得に失敗しました');
       return;
     }
 
-    let voicevoxVersion = "";
-    try {
-      voicevoxVersion = await VoicevoxClient.getVersion();
-    } catch (e) {
-      console.error(e);
+    const channel = interaction.channel;
+    if (!channel || !("isTextBased" in channel) || !channel.isTextBased() || channel.type === ChannelType.GuildVoice || channel.type === ChannelType.GuildStageVoice) {
+      await interaction.reply({ content: '❌ テキストチャンネルで実行してください', flags: MessageFlags.Ephemeral });
+      return;
     }
 
-    let message = `✅ ${voiceChannel.name} に`;
-    if (alreadyConnected) {
-      message += "再接続";
-    } else if (hasAnotherConnection) {
-      message += "移動";
-    } else {
-      message += "接続";
-    }
-    message += "しました！\n"
-    if (voicevoxVersion) {
-      message += `VOICEVOX: ${voicevoxVersion}`;
-    } else {
-      message += `VOICEVOX: 利用不可`;
-    }
-    ttsChannelStore.set(guild.id, interaction.channelId);
-    await interaction.editReply(message);
+    setVoiceTextLink(guild.id, voiceChannel.id, interaction.channelId);
+    await interaction.reply(`✅ ${voiceChannel.name} に <#${interaction.channelId}> を紐づけました`);
+  }
 
-    try {
-      const speakerId = resolveGuildSpeakerId(guild.id);
-      await voicevoxService.speak(guild.id, `接続しました`, speakerId);
-    } catch (e) {
-      console.error(e);
+  @Slash({ description: "VCとテキストチャンネルの紐づけを解除します" })
+  async unlink(
+    @SlashOption({
+      name: "vc",
+      description: "紐づけを解除するボイスチャンネル",
+      type: ApplicationCommandOptionType.Channel,
+      channelTypes: [ChannelType.GuildVoice, ChannelType.GuildStageVoice],
+      required: true,
+    })
+    voiceChannel: VoiceBasedChannel,
+    interaction: CommandInteraction
+  ): Promise<void> {
+    const guild = interaction.guild;
+    if (!guild) {
+      await interaction.reply('💥 サーバー情報の取得に失敗しました');
+      return;
     }
+
+    const deleted = deleteVoiceTextLink(guild.id, voiceChannel.id);
+    await interaction.reply(deleted ? `🗑️ ${voiceChannel.name} の紐づけを解除しました` : `🤔 ${voiceChannel.name} は紐づけされていません`);
+  }
+
+  @ButtonComponent({ id: new RegExp(`^${JOIN_LINK_BUTTON_PREFIX}`) })
+  async joinLinkedVoiceChannel(interaction: ButtonInteraction): Promise<void> {
+    const guild = interaction.guild;
+    const voiceChannelId = interaction.customId.slice(JOIN_LINK_BUTTON_PREFIX.length);
+    if (!guild || !voiceChannelId) {
+      await interaction.reply({ content: '💥 サーバー情報の取得に失敗しました', flags: MessageFlags.Ephemeral });
+      return;
+    }
+
+    const textChannelId = getVoiceTextLink(guild.id, voiceChannelId);
+    if (!textChannelId || textChannelId !== interaction.channelId) {
+      await interaction.reply({ content: '❌ このボタンの紐づけは現在有効ではありません', flags: MessageFlags.Ephemeral });
+      return;
+    }
+
+    const channel = await guild.channels.fetch(voiceChannelId).catch(() => null);
+    if (!channel?.isVoiceBased()) {
+      await interaction.reply({ content: '❌ 紐づけ先のVCが見つかりません', flags: MessageFlags.Ephemeral });
+      return;
+    }
+
+    await interaction.deferReply();
+    await joinAndAnnounce(
+      channel,
+      (message) => {
+        ttsChannelStore.set(guild.id, textChannelId);
+        return interaction.editReply(message);
+      },
+      () => interaction.editReply('❌ VCへの接続に失敗しました')
+    );
   }
 
   @Slash({ description: "skip" })
@@ -249,6 +310,10 @@ export class Voice {
     }
 
     const guildId = newState.guild.id;
+    if (newState.channelId && newState.member && !newState.member.user.bot) {
+      await sendLinkedJoinMessage(newState.guild, newState.channelId, newState.member.displayName);
+    }
+
     const currentChannelId = getVoiceConnection(guildId)?.joinConfig.channelId;
     if (!currentChannelId) {
       return;
@@ -310,6 +375,78 @@ async function resolveSpeakerLabel(styleId: number): Promise<string> {
   const speakers = await fetchSpeakersOrNull();
   if (!speakers) return "";
   return findSpeakerStyleLabel(speakers, styleId) ?? "";
+}
+
+async function sendLinkedJoinMessage(guild: Guild, voiceChannelId: string, displayName: string): Promise<void> {
+  const textChannelId = getVoiceTextLink(guild.id, voiceChannelId);
+  if (!textChannelId) {
+    return;
+  }
+
+  const textChannel = await guild.channels.fetch(textChannelId).catch(() => null);
+  if (!textChannel?.isTextBased() || !("send" in textChannel)) {
+    return;
+  }
+
+  const embed = new EmbedBuilder()
+    .setTitle("VCに参加しました")
+    .setDescription(`${displayName}さんが <#${voiceChannelId}> に接続しました`)
+    .setColor(0x7289da);
+
+  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`${JOIN_LINK_BUTTON_PREFIX}${voiceChannelId}`)
+      .setLabel("読み上げを開始")
+      .setStyle(ButtonStyle.Primary)
+  );
+
+  await textChannel.send({ embeds: [embed], components: [row] }).catch((e) => console.error(e));
+}
+
+async function joinAndAnnounce(
+  voiceChannel: VoiceBasedChannel,
+  onSuccess: (message: string) => Promise<unknown>,
+  onFailure: () => Promise<unknown>
+): Promise<void> {
+  const alreadyConnected = voiceChannel.members.has(bot.user?.id || "0");
+  const hasAnotherConnection = !!getVoiceConnection(voiceChannel.guild.id);
+  try {
+    await connectWithHandler(voiceChannel);
+  } catch {
+    await onFailure();
+    return;
+  }
+
+  let voicevoxVersion = "";
+  try {
+    voicevoxVersion = await VoicevoxClient.getVersion();
+  } catch (e) {
+    console.error(e);
+  }
+
+  let message = `✅ ${voiceChannel.name} に`;
+  if (alreadyConnected) {
+    message += "再接続";
+  } else if (hasAnotherConnection) {
+    message += "移動";
+  } else {
+    message += "接続";
+  }
+  message += "しました！\n";
+  if (voicevoxVersion) {
+    message += `VOICEVOX: ${voicevoxVersion}`;
+  } else {
+    message += `VOICEVOX: 利用不可`;
+  }
+
+  await onSuccess(message);
+
+  try {
+    const speakerId = resolveGuildSpeakerId(voiceChannel.guild.id);
+    await voicevoxService.speak(voiceChannel.guild.id, `接続しました`, speakerId);
+  } catch (e) {
+    console.error(e);
+  }
 }
 
 /**

@@ -37,3 +37,13 @@ export const guildMessageFilterHits = sqliteTable("guild_message_filter_hits", {
   userId: text("user_id").notNull(),
   messageLink: text("message_link").notNull(),
 });
+
+export const voiceTextLinks = sqliteTable(
+  "voice_text_links",
+  {
+    guildId: text("guild_id").notNull(),
+    voiceChannelId: text("voice_channel_id").notNull(),
+    textChannelId: text("text_channel_id").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.guildId, t.voiceChannelId] })]
+);
