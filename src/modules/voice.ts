@@ -46,7 +46,7 @@ export class Voice {
 
     const voiceChannel = member.voice?.channel;
     if (!voiceChannel) {
-      await interaction.reply('先にVCに入ってください！');
+      await interaction.reply('❌ 先にVCに入ってください！');
       return;
     }
 
@@ -206,12 +206,12 @@ export class Voice {
     if (speakerId == null) {
       const current = getUserSpeaker(userId);
       if (current == null) {
-        await interaction.reply(`話者IDは設定されていません`);
+        await interaction.reply(`🤔 話者IDは設定されていません`);
         return;
       }
       await interaction.deferReply();
       const label = await resolveSpeakerLabel(current);
-      await interaction.editReply(`現在の話者ID: **${current}**${label}`);
+      await interaction.editReply(`🎙️ 現在の話者ID: **${current}**${label}`);
       return;
     }
     if (speakerId === 0) {
@@ -249,12 +249,12 @@ export class Voice {
     if (speakerId == null) {
       const current = getGuildSpeaker(guildId);
       if (current == null) {
-        await interaction.reply(`デフォルト話者IDは設定されていません`);
+        await interaction.reply(`🤔 デフォルト話者IDは設定されていません`);
         return;
       }
       await interaction.deferReply();
       const label = await resolveSpeakerLabel(current);
-      await interaction.editReply(`現在のデフォルト話者ID: **${current}**${label}`);
+      await interaction.editReply(`🎙️ 現在のデフォルト話者ID: **${current}**${label}`);
       return;
     }
     if (speakerId === 0) {
@@ -398,7 +398,7 @@ async function sendLinkedJoinMessage(guild: Guild, voiceChannelId: string, displ
   );
 
   await textChannel.send({
-    content: `${displayName}さんが <#${voiceChannelId}> に接続しました`,
+    content: `👋 ${displayName}さんが <#${voiceChannelId}> に接続しました`,
     components: [row],
   }).catch((e) => console.error(e));
 }
