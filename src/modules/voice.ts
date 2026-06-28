@@ -310,11 +310,11 @@ export class Voice {
     }
 
     const guildId = newState.guild.id;
+    const currentChannelId = getVoiceConnection(guildId)?.joinConfig.channelId ?? undefined;
     if (newState.channelId && newState.channel && newState.member && !newState.member.user.bot && isFirstNonBotMember(newState.channel)) {
-      await sendLinkedJoinMessage(newState.guild, newState.channelId, newState.member.displayName);
+      await sendLinkedJoinMessage(newState.guild, newState.channelId, newState.member.displayName, currentChannelId);
     }
 
-    const currentChannelId = getVoiceConnection(guildId)?.joinConfig.channelId;
     if (!currentChannelId) {
       return;
     }
@@ -383,7 +383,12 @@ async function resolveSpeakerLabel(styleId: number): Promise<string> {
   return findSpeakerStyleLabel(speakers, styleId) ?? "";
 }
 
-async function sendLinkedJoinMessage(guild: Guild, voiceChannelId: string, displayName: string): Promise<void> {
+async function sendLinkedJoinMessage(
+  guild: Guild,
+  voiceChannelId: string,
+  displayName: string,
+  currentVoiceChannelId: string | undefined
+): Promise<void> {
   const textChannelId = getVoiceTextLink(guild.id, voiceChannelId);
   if (!textChannelId) {
     return;
@@ -394,15 +399,21 @@ async function sendLinkedJoinMessage(guild: Guild, voiceChannelId: string, displ
     return;
   }
 
+  const isSwitchingVoiceChannel = currentVoiceChannelId != null && currentVoiceChannelId !== voiceChannelId;
+  const content = isSwitchingVoiceChannel
+    ? `👋 ${displayName}さんが <#${voiceChannelId}> に接続しました\n現在 <#${currentVoiceChannelId}> で読み上げ中ですが、切り替えますか？`
+    : `👋 ${displayName}さんが <#${voiceChannelId}> に接続しました`;
+  const buttonLabel = isSwitchingVoiceChannel ? "移動して読み上げを開始" : "読み上げを開始";
+
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId(`${JOIN_LINK_BUTTON_PREFIX}${voiceChannelId}`)
-      .setLabel("読み上げを開始")
+      .setLabel(buttonLabel)
       .setStyle(ButtonStyle.Primary)
   );
 
   await textChannel.send({
-    content: `👋 ${displayName}さんが <#${voiceChannelId}> に接続しました`,
+    content,
     components: [row],
   }).catch((e) => console.error(e));
 }
