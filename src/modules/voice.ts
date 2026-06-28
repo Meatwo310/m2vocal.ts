@@ -310,7 +310,7 @@ export class Voice {
     }
 
     const guildId = newState.guild.id;
-    if (newState.channelId && newState.member && !newState.member.user.bot) {
+    if (newState.channelId && newState.channel && newState.member && !newState.member.user.bot && isFirstNonBotMember(newState.channel)) {
       await sendLinkedJoinMessage(newState.guild, newState.channelId, newState.member.displayName);
     }
 
@@ -363,6 +363,10 @@ function findSpeakerStyle(speakers: Speaker[], styleId: number) {
 function findSpeakerStyleLabel(speakers: Speaker[], styleId: number): string | null {
   const found = findSpeakerStyle(speakers, styleId);
   return found ? ` (${found.speaker.name} / ${found.style.name})` : null;
+}
+
+function isFirstNonBotMember(voiceChannel: VoiceBasedChannel): boolean {
+  return voiceChannel.members.filter(member => !member.user.bot).size === 1;
 }
 
 async function fetchSpeakersOrNull(): Promise<Speaker[] | null> {
