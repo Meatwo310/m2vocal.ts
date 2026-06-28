@@ -344,8 +344,10 @@ export class Voice {
 
       console.log('自動退出: Botのみになったため切断しました');
       const connection = getVoiceConnection(guildId);
+      const textChannelId = ttsChannelStore.get(guildId);
       connection?.destroy();
       ttsChannelStore.delete(guildId);
+      await sendAutoDisconnectMessage(newState.guild, textChannelId);
     }
   }
 }
@@ -399,6 +401,19 @@ async function sendLinkedJoinMessage(guild: Guild, voiceChannelId: string, displ
     content: `${displayName}さんが <#${voiceChannelId}> に接続しました`,
     components: [row],
   }).catch((e) => console.error(e));
+}
+
+async function sendAutoDisconnectMessage(guild: Guild, textChannelId: string | undefined): Promise<void> {
+  if (!textChannelId) {
+    return;
+  }
+
+  const textChannel = await guild.channels.fetch(textChannelId).catch(() => null);
+  if (!textChannel?.isTextBased() || !("send" in textChannel)) {
+    return;
+  }
+
+  await textChannel.send("👋 VCに誰もいなくなったため切断しました").catch((e) => console.error(e));
 }
 
 async function joinAndAnnounce(
