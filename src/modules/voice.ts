@@ -388,11 +388,6 @@ async function sendLinkedJoinMessage(guild: Guild, voiceChannelId: string, displ
     return;
   }
 
-  const embed = new EmbedBuilder()
-    .setTitle("VCに参加しました")
-    .setDescription(`${displayName}さんが <#${voiceChannelId}> に接続しました`)
-    .setColor(0x7289da);
-
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId(`${JOIN_LINK_BUTTON_PREFIX}${voiceChannelId}`)
@@ -400,7 +395,10 @@ async function sendLinkedJoinMessage(guild: Guild, voiceChannelId: string, displ
       .setStyle(ButtonStyle.Primary)
   );
 
-  await textChannel.send({ embeds: [embed], components: [row] }).catch((e) => console.error(e));
+  await textChannel.send({
+    content: `${displayName}さんが <#${voiceChannelId}> に接続しました`,
+    components: [row],
+  }).catch((e) => console.error(e));
 }
 
 async function joinAndAnnounce(
